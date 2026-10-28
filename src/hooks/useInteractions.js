@@ -40,3 +40,26 @@ export function useInteractions(prospectId) {
 
   return { interactions, loading, reload, addInteraction }
 }
+
+// Toutes les interactions, tous prospects confondus — pour les KPIs du
+// tableau de bord (nb d'appels, taux de joignabilité, conversion...).
+export function useAllInteractions() {
+  const [interactions, setInteractions] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    db.listInteractions({})
+      .then((rows) => {
+        if (!cancelled) setInteractions(rows)
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  return { interactions, loading }
+}

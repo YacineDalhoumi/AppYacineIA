@@ -4,7 +4,7 @@ import {
   IconTasks,
   IconProspects,
   IconPipeline,
-  IconPayments,
+  IconPhone,
   IconSettings,
 } from './Icons'
 
@@ -13,7 +13,7 @@ const ICONS = {
   tasks: IconTasks,
   prospects: IconProspects,
   pipeline: IconPipeline,
-  payments: IconPayments,
+  phone: IconPhone,
   settings: IconSettings,
 }
 
@@ -24,7 +24,9 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
       <aside className={`sidebar${isOpen ? ' is-open' : ''}`}>
         <div className="sidebar-brand">
           <span className="sidebar-brand-mark">Y</span>
-          <span className="sidebar-brand-name">Yacine</span>
+          <div>
+            <div className="sidebar-brand-name">Yacine CRM</div>
+          </div>
         </div>
         <nav className="sidebar-nav">
           {NAV_ITEMS.map((item) => {
@@ -47,7 +49,7 @@ export default function Sidebar({ activePage, onNavigate, isOpen, onClose }) {
             )
           })}
         </nav>
-        <div className="sidebar-footer">Suivi commercial &amp; paiements</div>
+        <div className="sidebar-footer">Okto Agency — prospection</div>
       </aside>
     </>
   )

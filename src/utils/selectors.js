@@ -1,5 +1,5 @@
 import { STATUTS_EXCLUS_RELANCE } from './constants'
-import { todayIso, isOverdue, isToday } from './format'
+import { todayIso, daysBetween, isOverdue, isToday } from './format'
 
 const PRIORITY_RANK = { haute: 0, moyenne: 1, basse: 2 }
 
@@ -19,13 +19,16 @@ export function getCallQueue(prospects, referenceIso = todayIso()) {
     })
 }
 
-export function getOverdueProspects(prospects, referenceIso = todayIso()) {
-  return prospects.filter(
-    (p) =>
-      !STATUTS_EXCLUS_RELANCE.includes(p.statut) &&
-      p.date_prochaine_action &&
-      isOverdue(p.date_prochaine_action, referenceIso)
-  )
+// En retard = date de prochaine action dépassée, ou (à défaut de date
+// planifiée) sans contact depuis plus de `thresholdDays` jours (filet de
+// sécurité, seuil réglable dans Paramètres).
+export function getOverdueProspects(prospects, referenceIso = todayIso(), thresholdDays = 7) {
+  return prospects.filter((p) => {
+    if (STATUTS_EXCLUS_RELANCE.includes(p.statut)) return false
+    if (p.date_prochaine_action) return isOverdue(p.date_prochaine_action, referenceIso)
+    if (p.date_dernier_contact) return daysBetween(p.date_dernier_contact, referenceIso) >= thresholdDays
+    return false
+  })
 }
 
 export function getTodayRappels(prospects, referenceIso = todayIso()) {

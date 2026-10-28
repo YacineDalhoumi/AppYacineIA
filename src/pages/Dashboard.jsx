@@ -1,150 +1,149 @@
 import StatCard from '../components/StatCard'
-import Badge from '../components/Badge'
-import EmptyState from '../components/EmptyState'
-import { useApp } from '../state/AppContext'
+import { useProspects } from '../hooks/useProspects'
+import { useAllInteractions } from '../hooks/useInteractions'
 import {
-  IconUsersClock,
+  IconPhone,
   IconTrendUp,
-  IconClockAlert,
+  IconCalendar,
+  IconUsersClock,
   IconProspects,
-  IconWallet,
   IconAlert,
-  IconInbox,
-  IconFileInvoice,
 } from '../components/Icons'
-import { formatCurrency, formatDate, initials } from '../utils/format'
 import {
-  conversionRate,
-  getOverduePayments,
-  getProspectsToRelance,
-  sumPayments,
-} from '../utils/selectors'
-import { PROSPECT_STATUS_COLORS, PROSPECT_STATUS_LABELS } from '../utils/constants'
+  countCallsInLastDays,
+  tauxJoignabilite,
+  countRdvObtenus,
+  conversionFunnel,
+  repartitionParStatut,
+  repartitionParDepartement,
+  topMotifsRefus,
+} from '../utils/stats'
+import {
+  PROSPECT_STATUS_LABELS,
+  MOTIF_REFUS_LABELS,
+} from '../utils/constants'
 
-export default function Dashboard({ onNavigate }) {
-  const { state, dispatch } = useApp()
-  const { prospects, payments, settings } = state
-
-  const enCours = prospects.filter((p) => p.statut !== 'converti' && p.statut !== 'perdu')
-  const relances = getProspectsToRelance(prospects, settings.relanceThresholdDays).slice(0, 5)
-  const overduePayments = getOverduePayments(payments).slice(0, 5)
-  const encaisse = sumPayments(payments, 'paye')
-  const enAttente = sumPayments(payments, 'en_attente')
-
-  function markRelance(prospect) {
-    dispatch({
-      type: 'MARK_RELANCE',
-      payload: { id: prospect.id, date: new Date().toISOString().slice(0, 10) },
-    })
+function BarList({ data, labelFor, emptyLabel }) {
+  if (data.length === 0) {
+    return <div style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{emptyLabel}</div>
   }
+  const max = Math.max(...data.map(([, count]) => count), 1)
+  return (
+    <div className="bar-list">
+      {data.map(([key, count]) => (
+        <div className="bar-row" key={key}>
+          <span className="bar-row-label">{labelFor(key)}</span>
+          <span className="bar-row-track">
+            <span className="bar-row-fill" style={{ width: `${(count / max) * 100}%` }} />
+          </span>
+          <span className="bar-row-value">{count}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default function Dashboard() {
+  const { prospects } = useProspects({})
+  const { interactions } = useAllInteractions()
+
+  const callsToday = countCallsInLastDays(interactions, 1)
+  const callsWeek = countCallsInLastDays(interactions, 7)
+  const callsMonth = countCallsInLastDays(interactions, 30)
+  const joignabilite = tauxJoignabilite(interactions, 30)
+  const rdvObtenus = countRdvObtenus(interactions, 30)
+  const funnel = conversionFunnel(interactions, prospects)
+  const parStatut = repartitionParStatut(prospects)
+  const parDept = repartitionParDepartement(prospects)
+  const motifsRefus = topMotifsRefus(prospects)
 
   return (
     <div className="page-content">
       <div className="page-header">
         <div className="page-header-text">
-          <h1>Dashboard</h1>
-          <p>Vue d&apos;ensemble de votre activité commerciale et financière.</p>
+          <h1>Tableau de bord</h1>
+          <p>Activité de prospection — Okto Agency</p>
         </div>
       </div>
 
       <div className="stat-grid">
-        <StatCard
-          label="Prospects en cours"
-          value={enCours.length}
-          icon={<IconUsersClock size={18} />}
-          color="accent"
-        />
-        <StatCard
-          label="Taux de conversion"
-          value={`${conversionRate(prospects)}%`}
-          icon={<IconTrendUp size={18} />}
-          color="success"
-        />
-        <StatCard
-          label="Relances en retard"
-          value={getProspectsToRelance(prospects, settings.relanceThresholdDays).length}
-          icon={<IconClockAlert size={18} />}
-          color="warning"
-        />
-        <StatCard
-          label="Total prospects"
-          value={prospects.length}
-          icon={<IconProspects size={18} />}
-          color="neutral"
-        />
-        <StatCard
-          label="CA encaissé"
-          value={formatCurrency(encaisse, settings.currency)}
-          icon={<IconWallet size={18} />}
-          color="success"
-        />
-        <StatCard
-          label="Montant en attente"
-          value={formatCurrency(enAttente, settings.currency)}
-          icon={<IconAlert size={18} />}
-          color="warning"
-        />
+        <StatCard label="Appels aujourd'hui" value={callsToday} icon={<IconPhone size={18} />} color="accent" />
+        <StatCard label="Appels cette semaine" value={callsWeek} icon={<IconPhone size={18} />} color="accent" />
+        <StatCard label="Appels ce mois" value={callsMonth} icon={<IconPhone size={18} />} color="accent" />
+        <StatCard label="Taux de joignabilité (30j)" value={`${joignabilite}%`} icon={<IconTrendUp size={18} />} color="success" />
+        <StatCard label="RDV obtenus (30j)" value={rdvObtenus} icon={<IconCalendar size={18} />} color="rdv" />
+        <StatCard label="Total prospects" value={prospects.length} icon={<IconProspects size={18} />} color="neutral" />
+      </div>
+
+      <div className="card">
+        <div className="card-title-row">
+          <h3>Conversion appel → RDV → client</h3>
+        </div>
+        <div className="funnel">
+          <div className="funnel-step">
+            <div className="funnel-step-value">{funnel.totalAppels}</div>
+            <div className="funnel-step-label">Appels</div>
+          </div>
+          <span className="funnel-arrow">→ {funnel.appelToRdv}% →</span>
+          <div className="funnel-step">
+            <div className="funnel-step-value">{funnel.totalRdv}</div>
+            <div className="funnel-step-label">RDV</div>
+          </div>
+          <span className="funnel-arrow">→ {funnel.rdvToClient}% →</span>
+          <div className="funnel-step">
+            <div className="funnel-step-value">{funnel.totalClients}</div>
+            <div className="funnel-step-label">Clients</div>
+          </div>
+        </div>
       </div>
 
       <div className="section-grid">
         <div className="card">
           <div className="card-title-row">
-            <h3>Relances à faire</h3>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNavigate('tasks')}>
-              Voir tout
-            </button>
+            <h3>Répartition par statut</h3>
           </div>
-          {relances.length === 0 ? (
-            <EmptyState title="Aucune relance en retard" icon={<IconInbox size={20} />} />
-          ) : (
-            relances.map((p) => (
-              <div className="list-row" key={p.id}>
-                <div className="list-row-main">
-                  <span className="list-row-avatar">{initials(p.nom)}</span>
-                  <div>
-                    <div className="list-row-title">{p.nom}</div>
-                    <div className="list-row-sub">
-                      {p.entreprise} · Contact le {formatDate(p.dateContact)}
-                    </div>
-                  </div>
-                </div>
-                <div className="list-row-meta">
-                  <Badge label={PROSPECT_STATUS_LABELS[p.statut]} color={PROSPECT_STATUS_COLORS[p.statut]} />
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => markRelance(p)}>
-                    Relancé
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
+          <BarList data={parStatut} labelFor={(k) => PROSPECT_STATUS_LABELS[k] || k} emptyLabel="Aucun prospect." />
         </div>
 
         <div className="card">
           <div className="card-title-row">
-            <h3>Factures en retard</h3>
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => onNavigate('payments')}>
-              Voir tout
-            </button>
+            <h3>Répartition par département</h3>
           </div>
-          {overduePayments.length === 0 ? (
-            <EmptyState title="Aucune facture en retard" icon={<IconFileInvoice size={20} />} />
-          ) : (
-            overduePayments.map((pay) => (
-              <div className="list-row" key={pay.id}>
-                <div className="list-row-main">
-                  <span className="list-row-avatar">{initials(pay.client)}</span>
-                  <div>
-                    <div className="list-row-title">{pay.client}</div>
-                    <div className="list-row-sub">Échéance {formatDate(pay.dateEcheance)}</div>
-                  </div>
-                </div>
-                <div className="list-row-meta">
-                  <Badge label="En retard" color="danger" />
-                  <span className="table-cell-primary">{formatCurrency(pay.montant, settings.currency)}</span>
-                </div>
-              </div>
-            ))
-          )}
+          <BarList data={parDept} labelFor={(k) => k} emptyLabel="Aucun prospect." />
+        </div>
+
+        <div className="card">
+          <div className="card-title-row">
+            <h3>Top motifs de refus</h3>
+          </div>
+          <BarList
+            data={motifsRefus}
+            labelFor={(k) => MOTIF_REFUS_LABELS[k] || k}
+            emptyLabel="Aucun refus enregistré."
+          />
+        </div>
+
+        <div className="card">
+          <div className="card-title-row">
+            <h3>Prospects en cours</h3>
+          </div>
+          <StatCard
+            label="Hors gagnés / refusés / ne plus contacter"
+            value={prospects.filter((p) => !['gagne', 'refuse', 'ne_plus_contacter'].includes(p.statut)).length}
+            icon={<IconUsersClock size={18} />}
+            color="warning"
+          />
+          <div style={{ marginTop: 16 }}>
+            <div className="card-title-row">
+              <h3>Appels sans réponse (30j)</h3>
+            </div>
+            <StatCard
+              label="Sur le total d'appels de la période"
+              value={interactions.filter((i) => i.type === 'appel' && i.statut_apres === 'pas_de_reponse').length}
+              icon={<IconAlert size={18} />}
+              color="danger"
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -1,26 +1,44 @@
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
+import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
-import Tasks from './pages/Tasks'
+import Today from './pages/Today'
+import CallSession from './pages/CallSession'
 import Prospects from './pages/Prospects'
 import Pipeline from './pages/Pipeline'
-import Payments from './pages/Payments'
+import ProspectDetail from './pages/ProspectDetail'
 import Settings from './pages/Settings'
-import { useApp } from './state/AppContext'
+import { useAuth } from './state/AuthContext'
+import { useSettings } from './hooks/useSettings'
 
 export default function App() {
-  const { state } = useApp()
+  const { loading, isAuthenticated } = useAuth()
+  const { settings } = useSettings()
+
   const [activePage, setActivePage] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [invoicePrefill, setInvoicePrefill] = useState(null)
+  const [selectedProspectId, setSelectedProspectId] = useState(null)
+  const [detailOrigin, setDetailOrigin] = useState('prospects')
 
-  const handleCreateInvoice = useCallback((prospect) => {
-    setInvoicePrefill({ prospectId: prospect.id, client: prospect.entreprise })
-    setActivePage('payments')
-  }, [])
+  function openProspect(id) {
+    setDetailOrigin(activePage)
+    setSelectedProspectId(id)
+    setActivePage('prospectDetail')
+  }
 
-  const consumeInvoicePrefill = useCallback(() => setInvoicePrefill(null), [])
+  function closeProspectDetail() {
+    setActivePage(detailOrigin)
+    setSelectedProspectId(null)
+  }
+
+  if (loading) {
+    return <div className="auth-loading">Chargement...</div>
+  }
+
+  if (!isAuthenticated) {
+    return <Login />
+  }
 
   return (
     <div className="app-shell">
@@ -32,16 +50,17 @@ export default function App() {
       />
       <div className="app-main">
         <Topbar
-          activePage={activePage}
+          activePage={activePage === 'prospectDetail' ? detailOrigin : activePage}
           onOpenSidebar={() => setSidebarOpen(true)}
-          userName={state.settings.userName}
+          userName={settings.userName}
         />
-        {activePage === 'dashboard' && <Dashboard onNavigate={setActivePage} />}
-        {activePage === 'tasks' && <Tasks />}
-        {activePage === 'prospects' && <Prospects onCreateInvoice={handleCreateInvoice} />}
-        {activePage === 'pipeline' && <Pipeline />}
-        {activePage === 'payments' && (
-          <Payments invoicePrefill={invoicePrefill} onPrefillConsumed={consumeInvoicePrefill} />
+        {activePage === 'dashboard' && <Dashboard />}
+        {activePage === 'today' && <Today onOpenProspect={openProspect} />}
+        {activePage === 'callSession' && <CallSession onOpenProspect={openProspect} />}
+        {activePage === 'prospects' && <Prospects onOpenProspect={openProspect} />}
+        {activePage === 'pipeline' && <Pipeline onOpenProspect={openProspect} />}
+        {activePage === 'prospectDetail' && (
+          <ProspectDetail prospectId={selectedProspectId} onBack={closeProspectDetail} onDeleted={closeProspectDetail} />
         )}
         {activePage === 'settings' && <Settings />}
       </div>
