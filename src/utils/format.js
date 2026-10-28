@@ -1,12 +1,3 @@
-export function formatCurrency(amount, currency = '€') {
-  const value = Number(amount) || 0
-  const formatted = value.toLocaleString('fr-FR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })
-  return currency === '€' ? `${formatted} €` : `${formatted} ${currency}`
-}
-
 export function formatDate(isoDate) {
   if (!isoDate) return '—'
   const date = new Date(isoDate)
@@ -18,8 +9,32 @@ export function formatDate(isoDate) {
   })
 }
 
+export function formatDateTime(isoDateTime) {
+  if (!isoDateTime) return '—'
+  const date = new Date(isoDateTime)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+export function formatTime(isoDateTime) {
+  if (!isoDateTime) return '—'
+  const date = new Date(isoDateTime)
+  if (Number.isNaN(date.getTime())) return '—'
+  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+}
+
 export function todayIso() {
   return new Date().toISOString().slice(0, 10)
+}
+
+export function nowIso() {
+  return new Date().toISOString()
 }
 
 export function daysBetween(fromIso, toIso) {
@@ -34,13 +49,21 @@ export function isOverdue(dueIso, referenceIso = todayIso()) {
   return daysBetween(referenceIso, dueIso) < 0
 }
 
-// Statut "réel" d'un paiement : si l'échéance est dépassée et qu'il n'a
-// été ni payé ni annulé, il est considéré en retard quel que soit le
-// statut enregistré (couvre les paiements créés avant que l'échéance passe).
-export function computeEffectiveStatus(payment, referenceIso = todayIso()) {
-  if (payment.statut === 'paye' || payment.statut === 'annule') return payment.statut
-  if (isOverdue(payment.dateEcheance, referenceIso) && !payment.datePaiement) return 'en_retard'
-  return payment.statut
+export function isToday(isoDate, referenceIso = todayIso()) {
+  if (!isoDate) return false
+  return isoDate.slice(0, 10) === referenceIso
+}
+
+// Semaine en cours (lundi -> dimanche), au format { fromIso, toIso }.
+export function getWeekRange(referenceIso = todayIso()) {
+  const date = new Date(`${referenceIso}T00:00:00`)
+  const day = date.getDay() // 0 = dimanche .. 6 = samedi
+  const diffToMonday = day === 0 ? -6 : 1 - day
+  const monday = new Date(date)
+  monday.setDate(date.getDate() + diffToMonday)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  return { fromIso: monday.toISOString().slice(0, 10), toIso: sunday.toISOString().slice(0, 10) }
 }
 
 export function initials(name = '') {
