@@ -66,6 +66,23 @@ export function getWeekRange(referenceIso = todayIso()) {
   return { fromIso: monday.toISOString().slice(0, 10), toIso: sunday.toISOString().slice(0, 10) }
 }
 
+// Pour un <input type="datetime-local">, qui attend/retourne un format local
+// sans fuseau ("YYYY-MM-DDTHH:mm"), à convertir vers/depuis un ISO complet.
+export function toDatetimeLocal(iso) {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+export function fromDatetimeLocal(value) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toISOString()
+}
+
 export function initials(name = '') {
   return name
     .split(' ')

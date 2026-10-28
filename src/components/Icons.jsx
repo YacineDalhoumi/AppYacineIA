@@ -64,12 +64,10 @@ export function IconPipeline(props) {
   )
 }
 
-export function IconPayments(props) {
+export function IconPhone(props) {
   return (
     <Svg {...props}>
-      <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
-      <path d="M2.5 10h19" />
-      <path d="M6 14.5h4" />
+      <path d="M5 4.5h3.2l1.3 4.2-2 1.6a12 12 0 005.2 5.2l1.6-2 4.2 1.3V18a1.7 1.7 0 01-1.8 1.7A15.5 15.5 0 014.5 6.3 1.7 1.7 0 015 4.5z" />
     </Svg>
   )
 }
@@ -208,13 +206,61 @@ export function IconCheck(props) {
   )
 }
 
-export function IconFileInvoice(props) {
+export function IconArrowLeft(props) {
   return (
     <Svg {...props}>
-      <path d="M7 3.5h7l4 4V19a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 016 19V5A1.5 1.5 0 017 3.5z" />
-      <path d="M14 3.5V8h4.5" />
-      <path d="M9 12.5h6" />
-      <path d="M9 15.5h6" />
+      <path d="M19 12H5" />
+      <path d="M11 6l-6 6 6 6" />
+    </Svg>
+  )
+}
+
+export function IconCalendar(props) {
+  return (
+    <Svg {...props}>
+      <rect x="3.5" y="5" width="17" height="16" rx="2" />
+      <path d="M3.5 9.5h17" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+    </Svg>
+  )
+}
+
+export function IconUpload(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 16V4" />
+      <path d="M7 9l5-5 5 5" />
+      <path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3" />
+    </Svg>
+  )
+}
+
+export function IconDownload(props) {
+  return (
+    <Svg {...props}>
+      <path d="M12 4v12" />
+      <path d="M7 11l5 5 5-5" />
+      <path d="M4 20h16" />
+    </Svg>
+  )
+}
+
+export function IconLogout(props) {
+  return (
+    <Svg {...props}>
+      <path d="M9 4H6a2 2 0 00-2 2v12a2 2 0 002 2h3" />
+      <path d="M15 16l4-4-4-4" />
+      <path d="M19 12H9" />
+    </Svg>
+  )
+}
+
+export function IconLock(props) {
+  return (
+    <Svg {...props}>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" />
+      <path d="M8 10.5V7a4 4 0 018 0v3.5" />
     </Svg>
   )
 }
