@@ -39,7 +39,7 @@ export default function Settings() {
       {isDemoMode && (
         <div className="auth-banner" style={{ maxWidth: 480 }}>
           Mode démo local : les données ne sont pas connectées à Supabase et ne sont pas partagées entre appareils.
-          Configure VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY pour activer la vraie base.
+          Configure VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY pour activer la vraie base.
         </div>
       )}
 

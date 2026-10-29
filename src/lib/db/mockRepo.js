@@ -1,4 +1,4 @@
-// Mode démo local : utilisé tant que VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
+// Mode démo local : utilisé tant que VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY
 // ne sont pas renseignées (voir src/lib/supabaseClient.js). Même interface que
 // supabaseRepo.js, données persistées en localStorage pour la durée du test.
 import { demoProspects, demoInteractions } from '../../utils/demoData'

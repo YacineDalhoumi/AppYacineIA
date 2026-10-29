@@ -6,6 +6,17 @@ function unwrap({ data, error }) {
   return data
 }
 
+// Lecture locale de la session (pas d'appel réseau, contrairement à
+// auth.getUser()) pour tagger user_id sur chaque ligne créée — la RLS
+// (auth.uid() = user_id) rejette de toute façon toute autre valeur.
+async function currentUserId() {
+  const { data, error } = await supabase.auth.getSession()
+  if (error) throw error
+  const userId = data.session?.user?.id
+  if (!userId) throw new Error('Utilisateur non authentifié.')
+  return userId
+}
+
 export const supabaseRepo = {
   async listProspects(params = {}) {
     const {
@@ -46,8 +57,10 @@ export const supabaseRepo = {
   },
 
   async createProspect(data) {
+    const { user_id: _ignored, ...rest } = data
     const payload = {
-      ...data,
+      ...rest,
+      user_id: await currentUserId(),
       telephone_fixe: normalizePhone(data.telephone_fixe) || null,
       telephone_mobile: normalizePhone(data.telephone_mobile) || null,
     }
@@ -56,7 +69,7 @@ export const supabaseRepo = {
   },
 
   async updateProspect(id, patch) {
-    const payload = { ...patch }
+    const { user_id: _ignored, ...payload } = patch
     if ('telephone_fixe' in payload) payload.telephone_fixe = normalizePhone(payload.telephone_fixe) || null
     if ('telephone_mobile' in payload) payload.telephone_mobile = normalizePhone(payload.telephone_mobile) || null
     const result = await supabase.from('prospects').update(payload).eq('id', id).select().single()
@@ -77,7 +90,9 @@ export const supabaseRepo = {
   },
 
   async createInteraction(data) {
-    const result = await supabase.from('interactions').insert(data).select().single()
+    const { user_id: _ignored, ...rest } = data
+    const payload = { ...rest, user_id: await currentUserId() }
+    const result = await supabase.from('interactions').insert(payload).select().single()
     return unwrap(result)
   },
 

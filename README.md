@@ -25,20 +25,66 @@ mais rien n'est partagé entre appareils ni réellement protégé.
 
 1. Crée un projet gratuit sur [supabase.com](https://supabase.com).
 2. Dans l'éditeur SQL du projet (*SQL Editor > New query*), colle et exécute
-   `supabase/schema.sql`, puis `supabase/seed.sql` (10 serruriers fictifs +
-   historique, facultatif mais pratique pour tester tout de suite).
+   dans l'ordre les deux fichiers de `supabase/migrations/` :
+   - `20261029090000_init_schema.sql` — tables `prospects` et
+     `interactions`, colonne `user_id` sur chacune, Row Level Security
+     (chaque utilisateur ne voit et ne modifie que ses propres lignes).
+   - `20261029090100_seed_demo.sql` *(facultatif)* — 10 serruriers fictifs
+     + historique, rattachés à ton compte. **Remplace `TON_EMAIL_ICI` par
+     l'email de ton compte avant de l'exécuter** (voir étape 3).
+
+   Alternative CLI (si tu préfères) : installe la [Supabase CLI](https://supabase.com/docs/guides/cli),
+   puis `supabase link --project-ref qbqgkalupatoszpkreon` et
+   `supabase db push` depuis la racine du projet — ça applique les mêmes
+   fichiers de `supabase/migrations/`.
 3. Dans *Authentication > Users*, crée manuellement ton utilisateur
    (email + mot de passe). Il n'y a pas d'inscription publique dans l'app.
+   C'est cet email qu'il faut mettre dans le script de seed à l'étape 2.
 4. Copie `.env.example` en `.env.local` et renseigne, depuis
    *Project Settings > API* :
    - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY` (clé publique "anon", pas la clé `service_role`)
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` (clé publique "publishable", anciennement
+     "anon" — jamais la clé secrète `service_role`)
 5. Relance `npm run dev`. L'écran de connexion apparaît ; connecte-toi avec
    le compte créé à l'étape 3.
 
-`supabase/schema.sql` est idempotent (peut être relancé sans dupliquer les
-tables) et active Row Level Security : seules les requêtes authentifiées
-peuvent lire/écrire `prospects` et `interactions`.
+Les migrations sont idempotentes (peuvent être relancées sans dupliquer les
+tables/politiques). Row Level Security est active sur les deux tables avec
+une politique `auth.uid() = user_id` : un utilisateur authentifié ne peut
+lire, créer, modifier ou supprimer que ses propres prospects/interactions —
+y compris si une autre personne utilise un jour le même projet Supabase.
+Les écritures (import CSV compris) passent par `src/lib/db/supabaseRepo.js`,
+qui tague automatiquement `user_id` avec l'utilisateur connecté ; la base
+rejette toute tentative d'écrire pour quelqu'un d'autre.
+
+### Tester que la connexion fonctionne
+
+1. `npm run dev`, ouvre `http://localhost:5173` — l'écran de connexion doit
+   apparaître (pas le mode démo) : ça confirme que `.env.local` est bien lu.
+2. Connecte-toi avec le compte créé à l'étape 3 ci-dessus.
+3. Si tu as exécuté le script de seed, tes 10 serruriers de démo doivent
+   apparaître dans **Prospects**. Modifie-en un, ou passe une carte d'une
+   colonne à l'autre dans **Pipeline** : rafraîchis la page, le changement
+   doit persister (preuve que ça écrit bien dans Supabase, pas en local).
+4. Ouvre la même URL depuis ton téléphone (même réseau, ou une fois déployée
+   en ligne) et connecte-toi avec le même compte : tu dois voir exactement
+   les mêmes prospects, à jour en temps réel après rafraîchissement.
+5. Dans Supabase, *Table Editor > prospects*, vérifie que chaque ligne a
+   bien un `user_id` renseigné (égal à ton UID dans *Authentication > Users*).
+
+### Déploiement en ligne (Authentication > URL Configuration)
+
+Quand tu déploies l'app (Vercel, Netlify, etc.), pense à configurer dans
+Supabase *Authentication > URL Configuration* :
+- **Site URL** : l'URL de prod (ex. `https://app.okto-agency.fr`).
+- **Redirect URLs** : ajoute l'URL de prod (et `http://localhost:5173` pour
+  continuer à développer en local) à la liste des URLs autorisées.
+
+Cette app n'utilise que l'email/mot de passe (pas de lien magique ni
+OAuth), donc ces réglages ne sont pas bloquants pour la connexion
+elle-même, mais Supabase s'en sert pour toute fonctionnalité future basée
+sur un lien (réinitialisation de mot de passe, confirmation d'email) — à
+régler avant d'en activer une.
 
 ## Import CSV
 
@@ -103,7 +149,8 @@ automatiquement une ligne dans l'historique des interactions.
   → création auto d'un projet, notification Slack...).
 - Enrichissement automatique des prospects (API Google Places pour avis/
   note, SIRENE pour les données d'entreprise).
-- Rôles/multi-utilisateurs si l'équipe grandit (RLS actuelle = un seul
-  utilisateur authentifié a accès à tout).
+- Partage en équipe si Okto Agency grandit : la RLS actuelle isole déjà
+  chaque utilisateur (il faudrait un modèle d'organisation/équipe pour
+  partager des prospects entre plusieurs comptes).
 - Graphiques natifs (courbes d'évolution dans le temps) si les listes à
   barres du tableau de bord deviennent limitantes.

@@ -1,5 +1,6 @@
--- Yacine CRM — schéma de base (prospects + interactions)
+-- Yacine CRM — schéma initial (prospects + interactions), multi-utilisateur.
 -- À coller dans Supabase : Project > SQL Editor > New query > Run.
+-- (Alternative CLI : `supabase link --project-ref <ref>` puis `supabase db push`.)
 -- Idempotent : peut être relancé sans dupliquer les objets.
 
 create extension if not exists pgcrypto;
@@ -10,6 +11,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists prospects (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
 
   -- Entreprise
   nom text not null,
@@ -70,6 +72,13 @@ create table if not exists prospects (
   updated_at timestamptz not null default now()
 );
 
+-- Si une version antérieure de la table existait déjà sans user_id
+-- (ancien schéma mono-utilisateur) : ajoute la colonne sans bloquer.
+-- Il faudra alors backfiller manuellement user_id sur les lignes existantes
+-- avant de pouvoir activer la contrainte NOT NULL (voir note en bas de fichier).
+alter table prospects add column if not exists user_id uuid references auth.users (id) on delete cascade;
+
+create index if not exists idx_prospects_user_id on prospects (user_id);
 create index if not exists idx_prospects_statut on prospects (statut);
 create index if not exists idx_prospects_departement on prospects (departement);
 create index if not exists idx_prospects_date_prochaine_action on prospects (date_prochaine_action);
@@ -81,6 +90,7 @@ create index if not exists idx_prospects_priorite on prospects (priorite);
 
 create table if not exists interactions (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
   prospect_id uuid not null references prospects (id) on delete cascade,
   date_heure timestamptz not null default now(),
   type text not null check (type in ('appel', 'email', 'sms', 'linkedin', 'rdv')),
@@ -91,6 +101,9 @@ create table if not exists interactions (
   created_at timestamptz not null default now()
 );
 
+alter table interactions add column if not exists user_id uuid references auth.users (id) on delete cascade;
+
+create index if not exists idx_interactions_user_id on interactions (user_id);
 create index if not exists idx_interactions_prospect_id on interactions (prospect_id);
 create index if not exists idx_interactions_date_heure on interactions (date_heure);
 
@@ -113,25 +126,38 @@ create trigger trg_prospects_updated_at
   execute function set_updated_at();
 
 -- ---------------------------------------------------------------------
--- Row Level Security — réservé aux utilisateurs authentifiés
--- (usage mono-utilisateur pour l'instant, pas de notion de propriétaire)
+-- Row Level Security — chaque utilisateur ne voit/modifie que ses lignes
 -- ---------------------------------------------------------------------
 
 alter table prospects enable row level security;
 alter table interactions enable row level security;
 
 drop policy if exists "authenticated manage prospects" on prospects;
-create policy "authenticated manage prospects"
+drop policy if exists "users manage own prospects" on prospects;
+create policy "users manage own prospects"
   on prospects
   for all
   to authenticated
-  using (true)
-  with check (true);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 drop policy if exists "authenticated manage interactions" on interactions;
-create policy "authenticated manage interactions"
+drop policy if exists "users manage own interactions" on interactions;
+create policy "users manage own interactions"
   on interactions
   for all
   to authenticated
-  using (true)
-  with check (true);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------
+-- NOTE : passage à NOT NULL sur user_id
+-- ---------------------------------------------------------------------
+-- Sur un projet neuf (tables créées directement par ce script), user_id
+-- est déjà NOT NULL ci-dessus. Si tu migres depuis l'ancien schéma
+-- mono-utilisateur et que des lignes existent déjà sans user_id, ce script
+-- les laisse nullable pour ne pas échouer. Une fois les lignes existantes
+-- rattachées à un utilisateur (voir migration de seed pour l'exemple avec
+-- auth.users), exécute :
+--   alter table prospects alter column user_id set not null;
+--   alter table interactions alter column user_id set not null;
